@@ -1,0 +1,373 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>أسعار التوصيل - Delivery Prices</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+
+        .container {
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            padding: 40px;
+            max-width: 500px;
+            width: 100%;
+        }
+
+        h1 {
+            text-align: center;
+            color: #667eea;
+            margin-bottom: 30px;
+            font-size: 28px;
+        }
+
+        .search-container {
+            position: relative;
+            margin-bottom: 20px;
+        }
+
+        #searchInput,
+        #discountInput {
+            width: 100%;
+            padding: 15px 20px;
+            font-size: 16px;
+            border: 2px solid #e0e0e0;
+            border-radius: 10px;
+            outline: none;
+            transition: all 0.3s;
+        }
+
+        #searchInput:focus,
+        #discountInput:focus {
+            border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+
+        .discount-container {
+            margin-bottom: 20px;
+        }
+
+        .suggestions {
+            position: absolute;
+            top: 100%;
+            left: 0;
+            right: 0;
+            background: white;
+            border: 2px solid #e0e0e0;
+            border-top: none;
+            border-radius: 0 0 10px 10px;
+            max-height: 250px;
+            overflow-y: auto;
+            display: none;
+            z-index: 10;
+            box-shadow: 0 10px 20px rgba(0, 0, 0, 0.1);
+        }
+
+        .suggestions.active {
+            display: block;
+        }
+
+        .suggestion-item {
+            padding: 12px 20px;
+            cursor: pointer;
+            transition: background 0.2s;
+            border-bottom: 1px solid #f0f0f0;
+        }
+
+        .suggestion-item:last-child {
+            border-bottom: none;
+        }
+
+        .suggestion-item:hover {
+            background: #f8f9ff;
+        }
+
+        .result {
+            display: none;
+            background: #f8f9ff;
+            padding: 25px;
+            border-radius: 10px;
+            margin-top: 20px;
+            border: 2px solid #667eea;
+        }
+
+        .result.active {
+            display: block;
+        }
+
+        .result-text {
+            font-size: 18px;
+            line-height: 1.8;
+            color: #333;
+            white-space: pre-line;
+            margin-bottom: 15px;
+        }
+
+        .copy-btn {
+            background: #667eea;
+            color: white;
+            border: none;
+            padding: 12px 30px;
+            border-radius: 8px;
+            font-size: 16px;
+            cursor: pointer;
+            transition: all 0.3s;
+            width: 100%;
+            font-weight: bold;
+        }
+
+        .copy-btn:hover {
+            background: #5568d3;
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.3);
+        }
+
+        .copy-btn:active {
+            transform: translateY(0);
+        }
+
+        .copied-message {
+            display: none;
+            text-align: center;
+            color: #10b981;
+            margin-top: 10px;
+            font-weight: bold;
+        }
+
+        .copied-message.active {
+            display: block;
+        }
+
+        .selected-wilaya {
+            text-align: center;
+            color: #667eea;
+            font-weight: bold;
+            margin-bottom: 15px;
+            font-size: 20px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🚚 أسعار التوصيل</h1>
+        
+        <div class="search-container">
+            <input 
+                type="text" 
+                id="searchInput" 
+                placeholder="ابحث عن الولاية..."
+                autocomplete="off"
+            >
+            <div class="suggestions" id="suggestions"></div>
+        </div>
+
+        <div class="discount-container">
+            <input
+                type="number"
+                id="discountInput"
+                placeholder="Discount"
+                min="0"
+                step="1"
+            >
+        </div>
+
+        <div class="result" id="result">
+            <div class="selected-wilaya" id="selectedWilaya"></div>
+            <div class="result-text" id="resultText"></div>
+            <button class="copy-btn" id="copyBtn">📋 نسخ النص</button>
+            <div class="copied-message" id="copiedMessage">✅ تم النسخ بنجاح!</div>
+        </div>
+    </div>
+
+    <script>
+        const wilayas = [
+  { "code": 1, "wilaya": "Adrar", "toDoor": 110, "toDesk": 70 },
+  { "code": 2, "wilaya": "Chlef", "toDoor": 65, "toDesk": 45 },
+  { "code": 3, "wilaya": "Laghouat", "toDoor": 80, "toDesk": 55 },
+  { "code": 4, "wilaya": "Oum El Bouaghi", "toDoor": 72, "toDesk": 45 },
+  { "code": 5, "wilaya": "Batna", "toDoor": 73, "toDesk": 45 },
+  { "code": 6, "wilaya": "Béjaïa", "toDoor": 72, "toDesk": 45 },
+  { "code": 7, "wilaya": "Biskra", "toDoor": 80, "toDesk": 55 },
+  { "code": 8, "wilaya": "Béchar", "toDoor": 100, "toDesk": 55 },
+  { "code": 9, "wilaya": "Blida", "toDoor": 58, "toDesk": 45 },
+  { "code": 10, "wilaya": "Bouira", "toDoor": 70, "toDesk": 45 },
+  { "code": 11, "wilaya": "Tamanrasset", "toDoor": 145, "toDesk": 75 },
+  { "code": 12, "wilaya": "Tébessa", "toDoor": 75, "toDesk": 45 },
+  { "code": 13, "wilaya": "Tlemcen", "toDoor": 65, "toDesk": 45 },
+  { "code": 14, "wilaya": "Tiaret", "toDoor": 70, "toDesk": 45 },
+  { "code": 15, "wilaya": "Tizi Ouzou", "toDoor": 68, "toDesk": 45 },
+  { "code": 16, "wilaya": "Alger", "toDoor": 48, "toDesk": 45 },
+  { "code": 17, "wilaya": "Djelfa", "toDoor": 80, "toDesk": 55 },
+  { "code": 18, "wilaya": "Jijel", "toDoor": 72, "toDesk": 45 },
+  { "code": 19, "wilaya": "Sétif", "toDoor": 72, "toDesk": 45 },
+  { "code": 20, "wilaya": "Saïda", "toDoor": 70, "toDesk": 45 },
+  { "code": 21, "wilaya": "Skikda", "toDoor": 72, "toDesk": 45 },
+  { "code": 22, "wilaya": "Sidi Bel Abbès", "toDoor": 65, "toDesk": 40 },
+  { "code": 23, "wilaya": "Annaba", "toDoor": 72, "toDesk": 45 },
+  { "code": 24, "wilaya": "Guelma", "toDoor": 73, "toDesk": 45 },
+  { "code": 25, "wilaya": "Constantine", "toDoor": 70, "toDesk": 45 },
+  { "code": 26, "wilaya": "Médéa", "toDoor": 70, "toDesk": 45 },
+  { "code": 27, "wilaya": "Mostaganem", "toDoor": 65, "toDesk": 45 },
+  { "code": 28, "wilaya": "M'Sila", "toDoor": 72, "toDesk": 45 },
+  { "code": 29, "wilaya": "Mascara", "toDoor": 75, "toDesk": 45 },
+  { "code": 30, "wilaya": "Ouargla", "toDoor": 90, "toDesk": 55 },
+  { "code": 31, "wilaya": "Oran", "toDoor": 40, "toDesk": 30 },
+  { "code": 32, "wilaya": "El Bayadh", "toDoor": 100, "toDesk": 55 },
+  { "code": 34, "wilaya": "Bordj Bou Arreridj", "toDoor": 72, "toDesk": 45 },
+  { "code": 35, "wilaya": "Boumerdès", "toDoor": 80, "toDesk": 45 },
+  { "code": 36, "wilaya": "El Tarf", "toDoor": 75, "toDesk": 45 },
+  { "code": 37, "wilaya": "Tindouf", "toDoor": 110, "toDesk": 70 },
+  { "code": 38, "wilaya": "Tissemsilt", "toDoor": 70, "toDesk": 45 },
+  { "code": 39, "wilaya": "El Oued", "toDoor": 90, "toDesk": 55 },
+  { "code": 40, "wilaya": "Khenchela", "toDoor": 73, "toDesk": 45 },
+  { "code": 41, "wilaya": "Souk Ahras", "toDoor": 73, "toDesk": 45 },
+  { "code": 42, "wilaya": "Tipaza", "toDoor": 58, "toDesk": 45 },
+  { "code": 43, "wilaya": "Mila", "toDoor": 73, "toDesk": 45 },
+  { "code": 44, "wilaya": "Aïn Defla", "toDoor": 70, "toDesk": 45 },
+  { "code": 45, "wilaya": "Naâma", "toDoor": 93, "toDesk": 55 },
+  { "code": 46, "wilaya": "Aïn Témouchent", "toDoor": 60, "toDesk": 45 },
+  { "code": 47, "wilaya": "Ghardaïa", "toDoor": 85, "toDesk": 55 },
+  { "code": 48, "wilaya": "Relizane", "toDoor": 68, "toDesk": 45 },
+  { "code": 49, "wilaya": "Timimoun", "toDoor": 110, "toDesk": 70 },
+  { "code": 50, "wilaya": "Bordj Badji Mokhtar", "toDoor": 0, "toDesk": 80 },
+  { "code": 51, "wilaya": "Ouled Djellal", "toDoor": 80, "toDesk": 55 },
+  { "code": 52, "wilaya": "Beni Abbes", "toDoor": 100, "toDesk": 55 },
+  { "code": 53, "wilaya": "In Salah", "toDoor": 140, "toDesk": 70 },
+  { "code": 54, "wilaya": "In Guezzam", "toDoor": 0, "toDesk": 80 },
+  { "code": 55, "wilaya": "Touggourt", "toDoor": 93, "toDesk": 55 },
+  { "code": 57, "wilaya": "El M'Ghair", "toDoor": 93, "toDesk": 60 },
+  { "code": 58, "wilaya": "El Meniaa", "toDoor": 85, "toDesk": 60 }
+];
+;
+
+        const searchInput = document.getElementById('searchInput');
+        const suggestionsDiv = document.getElementById('suggestions');
+        const resultDiv = document.getElementById('result');
+        const resultText = document.getElementById('resultText');
+        const selectedWilayaDiv = document.getElementById('selectedWilaya');
+        const copyBtn = document.getElementById('copyBtn');
+        const copiedMessage = document.getElementById('copiedMessage');
+        const discountInput = document.getElementById('discountInput');
+        const discountStorageKey = 'shippingDiscount';
+
+        discountInput.value = localStorage.getItem(discountStorageKey) || '';
+
+        let currentText = '';
+        let currentWilaya = null;
+
+        // Search and show suggestions
+        searchInput.addEventListener('input', function() {
+            const query = this.value.trim().toLowerCase();
+            
+            if (query === '') {
+                suggestionsDiv.classList.remove('active');
+                return;
+            }
+
+            const filtered = wilayas.filter(w => 
+                w.wilaya.toLowerCase().includes(query)
+            );
+
+            if (filtered.length > 0) {
+                suggestionsDiv.innerHTML = filtered.map(w => 
+                    `<div class="suggestion-item" data-code="${w.code}">${w.wilaya}</div>`
+                ).join('');
+                suggestionsDiv.classList.add('active');
+            } else {
+                suggestionsDiv.classList.remove('active');
+            }
+        });
+
+        // Handle suggestion click
+        suggestionsDiv.addEventListener('click', function(e) {
+            if (e.target.classList.contains('suggestion-item')) {
+                const code = parseInt(e.target.dataset.code);
+                const wilaya = wilayas.find(w => w.code === code);
+                
+                if (wilaya) {
+                    selectWilaya(wilaya);
+                }
+            }
+        });
+
+        function selectWilaya(wilaya) {
+            currentWilaya = wilaya;
+            searchInput.value = wilaya.wilaya;
+            suggestionsDiv.classList.remove('active');
+            updateResult();
+        }
+
+        function getDiscount() {
+            return Number(discountInput.value) || 0;
+        }
+
+        function getDiscountedPrice(price) {
+            return Math.max(0, price - getDiscount());
+        }
+
+        function buildText(wilaya) {
+            return `التوصيل ${getDiscountedPrice(wilaya.toDesk)} الف للمكتب\n${getDiscountedPrice(wilaya.toDoor)} الف لباب الدار`;
+        }
+
+        function updateResult() {
+            if (!currentWilaya) return;
+
+            const text = buildText(currentWilaya);
+
+            selectedWilayaDiv.textContent = currentWilaya.wilaya;
+            resultText.textContent = text;
+            currentText = text;
+            resultDiv.classList.add('active');
+            copiedMessage.classList.remove('active');
+
+            // Auto-copy
+            copyToClipboard(text);
+        }
+
+        discountInput.addEventListener('input', function() {
+            localStorage.setItem(discountStorageKey, discountInput.value);
+            updateResult();
+        });
+
+        // Copy button
+        copyBtn.addEventListener('click', function() {
+            copyToClipboard(currentText);
+        });
+
+        function copyToClipboard(text) {
+            navigator.clipboard.writeText(text).then(() => {
+                copiedMessage.classList.add('active');
+                setTimeout(() => {
+                    copiedMessage.classList.remove('active');
+                }, 2000);
+            }).catch(err => {
+                console.error('Failed to copy:', err);
+            });
+        }
+
+        // Close suggestions when clicking outside
+        document.addEventListener('click', function(e) {
+            if (!e.target.closest('.search-container')) {
+                suggestionsDiv.classList.remove('active');
+            }
+        });
+    </script>
+</body>
+
+</html>
